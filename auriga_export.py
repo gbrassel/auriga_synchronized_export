@@ -147,31 +147,74 @@ def normalise(iv: dict) -> dict:
     instructors = [" ".join(filter(None, [l.get("person", {}).get("currentFirstName"), l.get("person", {}).get("currentLastName")])).title() 
                    for l in iv.get("interventionInstructors") or []]
     
+    # Récupération des groupes (Filières/Parcours)
+    groups = []
+    for link in iv.get("interventionPopulations") or []:
+        pop = link.get("population") or {}
+        label = txt(pop.get("caption")) or pop.get("code") or ""
+        if label:
+            groups.append(label)
+    
     at = iv.get("activityType") or {}
+    field = txt((iv.get("field") or {}).get("caption"))
+    description = (iv.get("description") or "").strip()
+    type_label = txt(at.get("caption"), "Cours")
+    status = txt((iv.get("interventionStatus") or {}).get("caption"))
+    is_exam = bool(iv.get("isExam"))
+    
+    if field:
+        title = f"{field} ({type_label})"
+    else:
+        title = description.split('\n')[0] if description else type_label
+        
+    # Ajout du préfixe EXAM si nécessaire
+    if is_exam:
+        title = "EXAM - " + title
+        
     return {
         "id": iv["id"],
         "start": parse_dt(iv["startDateTime"]),
         "end": parse_dt(iv["endDateTime"]),
-        "title": re.sub(r"\s+", " ", (iv.get("description") or "").strip()) or txt(at.get("caption"), "Cours"),
-        "type_label": txt(at.get("caption")),
+        "title": title,
+        "description": description,
         "rooms": sorted(set(rooms)),
         "instructors": sorted(set(instructors)),
+        "groups": sorted(set(groups)),
+        "status": status,
+        "is_exam": is_exam
     }
 
 def build_ics(events: list[dict]) -> str:
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//auriga-export//ISAE-SUPAERO//FR", "CALSCALE:GREGORIAN", "X-WR-CALNAME:ISAE", "X-WR-TIMEZONE:Europe/Paris"]
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//auriga-export//ISAE-SUPAERO//FR", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Planning ISAE", "X-WR-TIMEZONE:Europe/Paris"]
     
     for ev in events:
+        desc_parts = []
+        if ev["description"]:
+            desc_parts.append(ev["description"])
+        if ev["instructors"]:
+            desc_parts.append("Intervenant(s) : " + ", ".join(ev["instructors"]))
+        if ev["groups"]:
+            desc_parts.append("Groupe(s) : " + ", ".join(ev["groups"]))
+        if ev["status"]:
+            desc_parts.append(f"Statut : {ev['status']}")
+            # Si le statut indique une annulation, on peut aussi l'ajouter au titre
+            if "annulé" in ev["status"].lower():
+                ev["title"] = "[ANNULÉ] " + ev["title"]
+        
+        desc_text = "\\n\\n".join(desc_parts).replace(",", r"\,").replace(";", r"\;")
+        title_text = ev["title"].replace(",", r"\,").replace(";", r"\;")
+        loc_text = ", ".join(ev["rooms"]).replace(",", r"\,").replace(";", r"\;")
+
         lines += [
             "BEGIN:VEVENT",
             f"UID:auriga-{ev['id']}@isae-supaero.fr",
             f"DTSTAMP:{stamp}",
             "DTSTART:" + ev["start"].strftime("%Y%m%dT%H%M%SZ"),
             "DTEND:" + ev["end"].strftime("%Y%m%dT%H%M%SZ"),
-            "SUMMARY:" + ev["title"].replace(",", r"\,").replace(";", r"\;"),
-            "LOCATION:" + ", ".join(ev["rooms"]).replace(",", r"\,"),
-            "DESCRIPTION:Intervenants: " + ", ".join(ev["instructors"]).replace(",", r"\,"),
+            "SUMMARY:" + title_text,
+            "LOCATION:" + loc_text,
+            "DESCRIPTION:" + desc_text,
             "END:VEVENT"
         ]
     lines.append("END:VCALENDAR")
