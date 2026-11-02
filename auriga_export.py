@@ -45,11 +45,23 @@ def grab_token() -> str:
         log("Navigation vers Auriga...")
         page.goto(PLANNING_URL)
 
+        # Clic sur le bouton SSO ISAE-SUPAERO
+        try:
+            log("Recherche du bouton SSO...")
+            page.get_by_text("SSO ISAE-SUPAERO").click(timeout=10000)
+            log("Bouton cliqué. En attente du portail ISAE...")
+            # On attend un peu que la redirection vers le vrai CAS se fasse
+            page.wait_for_load_state("networkidle")
+        except Exception:
+            log("Bouton SSO non trouvé, on tente de remplir directement...")
+
+        # Remplissage des identifiants sur le portail CAS de l'ISAE-SUPAERO
         try:
             log("Remplissage des identifiants SSO...")
             page.locator("#username").fill(user)
             page.locator("#password").fill(password)
-            page.locator("input[name='submit'], button[name='submit'], input[type='submit']").first.click()
+            # Appuyer sur Entrée est plus fiable que de chercher le bouton submit
+            page.keyboard.press("Enter")
             
             # Attendre spécifiquement que le SSO nous redirige vers Auriga (15s max)
             page.wait_for_url("**/auriga.isae-supaero.fr/**", timeout=15000)
