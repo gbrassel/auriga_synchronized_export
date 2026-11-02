@@ -34,7 +34,6 @@ def grab_token() -> str:
         context = browser.new_context()
         page = context.new_page()
 
-        # Interception réseau pour sniffer le Bearer token
         def handle_request(request):
             if "/api/" in request.url:
                 auth = request.headers.get("authorization", "")
@@ -46,27 +45,36 @@ def grab_token() -> str:
         log("Navigation vers Auriga...")
         page.goto(PLANNING_URL)
 
-        # Remplissage du SSO ISAE (Sélecteurs CAS standards)
         try:
             log("Remplissage des identifiants SSO...")
             page.locator("#username").fill(user)
             page.locator("#password").fill(password)
             page.locator("input[name='submit'], button[name='submit'], input[type='submit']").first.click()
-        except PlaywrightTimeout:
-            log("Formulaire SSO non trouvé. Peut-être déjà connecté ou l'interface a changé.")
+            
+            # Attendre spécifiquement que le SSO nous redirige vers Auriga (15s max)
+            page.wait_for_url("**/auriga.isae-supaero.fr/**", timeout=15000)
+            log("Redirection réussie.")
+        except Exception as e:
+            log(f"Avertissement lors de la connexion SSO : {e}")
 
-        # Attente du chargement de l'app Angular et de la requête API
-        log("Attente de l'interception du token OIDC...")
-        for _ in range(15):
+        log("Attente de l'interception du token OIDC (30s max)...")
+        for i in range(30):
             if token_box:
                 break
             page.wait_for_timeout(1000)
-
-        browser.close()
+            
+            # Nudge : Si on est sur l'accueil au lieu du planning, on force la route
+            if i == 10 and not token_box:
+                log("Forçage de l'URL vers la vue planning...")
+                page.goto(PLANNING_URL)
 
         if not token_box:
-            raise RuntimeError("Impossible de récupérer le token OIDC (Délai dépassé ou mauvais identifiants).")
+            # Capture d'écran cruciale pour le débogage
+            page.screenshot(path="error.png")
+            browser.close()
+            raise RuntimeError("Impossible de récupérer le token OIDC. Consultez error.png pour comprendre le blocage.")
 
+        browser.close()
         return token_box[0]
 
 # --------------------------------------------------------------------------

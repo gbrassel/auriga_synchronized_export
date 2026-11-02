@@ -29,3 +29,10 @@ jobs:
           GIST_ID: ${{ secrets.GIST_ID }}
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
         run: python auriga_export.py
+
+      - name: Sauvegarder la capture d'erreur
+        if: failure() # Ne s'exécute que si le script python plante
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshot
+          path: error.png
