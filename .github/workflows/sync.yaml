@@ -1,0 +1,31 @@
+name: Auriga Outlook Sync
+
+on:
+  schedule:
+    - cron: '0 */2 * * 1-5' # Toutes les 2h du lundi au vendredi
+  workflow_dispatch:      # Bouton manuel
+
+jobs:
+  run-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installation Playwright
+        run: |
+          pip install playwright
+          playwright install chromium
+
+      - name: Lancement de l'export et mise à jour du Gist
+        env:
+          ISAE_USER: ${{ secrets.ISAE_USER }}
+          ISAE_PASS: ${{ secrets.ISAE_PASS }}
+          GIST_ID: ${{ secrets.GIST_ID }}
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+        run: python auriga_export.py
