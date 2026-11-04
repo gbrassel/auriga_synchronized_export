@@ -256,6 +256,7 @@ def build_ics(events: list[dict]) -> str:
             "BEGIN:VEVENT",
             f"UID:auriga-{ev['id']}@isae-supaero.fr",
             f"DTSTAMP:{stamp}",
+            f"LAST-MODIFIED:{stamp}",
             "DTSTART:" + ev["start"].strftime("%Y%m%dT%H%M%SZ"),
             "DTEND:" + ev["end"].strftime("%Y%m%dT%H%M%SZ"),
             "SUMMARY:" + title_text,
