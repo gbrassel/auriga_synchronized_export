@@ -139,44 +139,90 @@ def daterange_chunks(start: dt.date, end: dt.date, days: int):
         cur = stop + dt.timedelta(days=1)
 
 def normalise(iv: dict) -> dict:
-    def txt(multi, default=""): return multi.get("fr") or multi.get("en") or default if isinstance(multi, dict) else default
-    def parse_dt(s): return dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.timezone.utc)
+    def txt(multi, default=""): 
+        if isinstance(multi, dict):
+            return multi.get("fr") or multi.get("en") or default
+        return default
+        
+    def parse_dt(s): 
+        return dt.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.timezone.utc)
     
-    rooms = [txt(l.get("resource", {}).get("caption")) or l.get("resource", {}).get("code", "") 
-             for l in iv.get("interventionResources") or [] if l.get("resource", {}).get("isRoom") and "COUPLEES" not in l.get("resource", {}).get("code", "").upper()]
-    instructors = [" ".join(filter(None, [l.get("person", {}).get("currentFirstName"), l.get("person", {}).get("currentLastName")])).title() 
-                   for l in iv.get("interventionInstructors") or []]
-    
-    # Récupération des groupes (Filières/Parcours)
+    # 1. Ressources (Salles) - Correction : on accepte TOUTES les salles, y compris les "COUPLEES"
+    rooms = []
+    for r_link in iv.get("interventionResources") or []:
+        res = r_link.get("resource") or {}
+        if res.get("isRoom"):
+            caption = txt(res.get("caption")) or res.get("code") or ""
+            if caption:
+                rooms.append(caption)
+                
+    # 2. Intervenants
+    instructors = []
+    for i_link in iv.get("interventionInstructors") or []:
+        pers = i_link.get("person") or {}
+        name = " ".join(filter(None, [pers.get("currentFirstName"), pers.get("currentLastName")])).title()
+        if name:
+            instructors.append(name)
+            
+    # 3. Groupes et Populations
     groups = []
-    for link in iv.get("interventionPopulations") or []:
-        pop = link.get("population") or {}
+    for p_link in iv.get("interventionPopulations") or []:
+        pop = p_link.get("population") or {}
         label = txt(pop.get("caption")) or pop.get("code") or ""
         if label:
             groups.append(label)
-    
+            
+    # 4. Modules Pédagogiques (Le véritable nom du cours !)
+    modules = []
+    for pu_link in iv.get("interventionPedagogicalUnits") or []:
+        pu = pu_link.get("pedagogicalUnit") or {}
+        mod_name = txt(pu.get("caption"))
+        if mod_name:
+            modules.append(mod_name)
+            
+    # 5. Extraction des métadonnées de base
     at = iv.get("activityType") or {}
-    field = txt((iv.get("field") or {}).get("caption"))
-    description = (iv.get("description") or "").strip()
-    type_label = txt(at.get("caption"), "Cours")
+    type_label = txt(at.get("caption"), "Activité")
+    field_label = txt((iv.get("field") or {}).get("caption"))
+    description_raw = (iv.get("description") or "").strip()
     status = txt((iv.get("interventionStatus") or {}).get("caption"))
-    is_exam = bool(iv.get("isExam"))
     
-    if field:
-        title = f"{field} ({type_label})"
-    else:
-        title = description.split('\n')[0] if description else type_label
+    # Détection des examens (via le booléen d'Auriga ou le type d'activité)
+    is_exam = bool(iv.get("isExam")) or ("exam" in type_label.lower())
+    
+    # 6. Logique de construction du Titre Explicite
+    # Priorité : Module Pédagogique > Field > Première ligne de la description
+    main_subject = ""
+    if modules:
+        main_subject = modules[0]
+    elif field_label:
+        main_subject = field_label
+    elif description_raw:
+        main_subject = description_raw.split('\n')[0]
         
-    # Ajout du préfixe EXAM si nécessaire
+    if main_subject:
+        title = f"{main_subject} ({type_label})"
+    else:
+        title = type_label # En tout dernier recours (très rare)
+
+    # 7. Ajout des alertes critiques dans le titre
     if is_exam:
-        title = "EXAM - " + title
+        title = f"[EXAMEN] {title}"
+    if status and "annulé" in status.lower():
+        title = f"[ANNULÉ] {title}"
+        
+    # 8. Nettoyage de la description pour éviter les doublons
+    final_desc = description_raw
+    if main_subject == description_raw.split('\n')[0]:
+        # Si la première ligne de la description a servi de titre, on l'enlève du corps
+        final_desc = "\n".join(description_raw.split('\n')[1:]).strip()
         
     return {
         "id": iv["id"],
         "start": parse_dt(iv["startDateTime"]),
         "end": parse_dt(iv["endDateTime"]),
         "title": title,
-        "description": description,
+        "description": final_desc,
         "rooms": sorted(set(rooms)),
         "instructors": sorted(set(instructors)),
         "groups": sorted(set(groups)),
