@@ -92,6 +92,8 @@ Vous devez vous **abonner** au flux dynamique :
 
 *Note : Outlook web met à jour les abonnements web toutes les 3 à 12 heures. Si vous utilisez l'application de bureau Outlook Classic sur Windows, vous pouvez forcer la synchronisation immédiatement en appuyant sur la touche `F9` (Envoyer/Recevoir).*
 
+** L'URL du gist fonctionne aussi sur les autres applications de messagerie (google calendar, etc...). Il suffit de sélectionner l'option "Abonnement à partir du web". **
+
 ---
 
 ## 🛠️ Dépannage et Fonctionnement
