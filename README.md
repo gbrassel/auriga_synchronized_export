@@ -123,3 +123,14 @@ Le script effectue un nettoyage intelligent des données brutes d'Auriga :
 - Les cours annulés sont préfixés par `[ANNULÉ]`.
 - Les examens sont préfixés par `[EXAMEN]`.
 - Le titre du cours privilégie l'Unité Pédagogique complète (ex: *Représentation et analyse des systèmes dynamiques (Bureau d'études)*) plutôt que les titres génériques.
+
+---
+
+## 🤝 Contributeurs & Contact
+
+* **Gauthier Brassel** ([@gbrassel](https://github.com/gbrassel)) — Automatisation GitHub Actions / Playwright, hébergement dynamique via Gist, normalisation des titres et synchronisation multi-calendriers.
+
+### Contribuer
+L'interface d'Auriga ou le portail SSO de l'ISAE-SUPAERO peuvent évoluer. Si vous rencontrez un bug ou souhaitez proposer une amélioration (ex. formatage des salles, ajout de rappels `VALARM`, filtres par matière) :
+1. Ouvrez une **Issue** pour signaler le problème.
+2. Proposez une **Pull Request** directement sur ce dépôt modèle.
