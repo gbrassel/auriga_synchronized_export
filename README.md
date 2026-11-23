@@ -1,6 +1,6 @@
-# 📅 Auriga ➡️ Outlook (Synchronisation Automatisée)
+# 📅 Auriga ➡️ Calendrier (Synchronisation Automatisée)
 
-Ce projet automatise l'exportation de votre emploi du temps Auriga (ISAE-SUPAERO) vers un calendrier Outlook, en maintenant une synchronisation régulière et invisible en arrière-plan.
+Ce projet automatise l'exportation de votre emploi du temps Auriga (ISAE-SUPAERO) vers un calendrier tiers (Outlook, google calendar ou tout autre webmail, en maintenant une synchronisation régulière et invisible en arrière-plan.
 
 L'architecture repose sur **GitHub Actions** pour exécuter le script, **Playwright** pour passer le SSO de l'école, et un **GitHub Gist secret** pour héberger dynamiquement le fichier `.ics`.
 
@@ -75,24 +75,32 @@ Pour déployer votre propre instance de ce synchroniseur, suivez ces étapes :
 
 ---
 
-## 📆 Configuration dans Outlook
+## 📆 Configuration dans votre application de calendrier
 
-**⚠️ ATTENTION : Ne téléchargez PAS le fichier `.ics` pour l'importer manuellement. Cela créerait des événements statiques impossibles à mettre à jour et générerait des doublons.**
+**⚠️ ATTENTION : Ne téléchargez PAS le fichier `.ics` pour l'importer manuellement.** Une importation statique ne se met pas à jour automatiquement et génère des doublons lors des réimports.
 
-Vous devez vous **abonner** au flux dynamique :
+Vous devez impérativement vous **abonner au flux dynamique** via son URL :
 
-1. Retournez sur votre Gist secret.
-2. Cliquez sur le bouton **Raw** en haut à droite de l'encart de code.
-3. Copiez l'URL complète dans la barre de votre navigateur (`https://gist.githubusercontent.com/...`).
-4. Ouvrez [Outlook Web (Calendrier)](https://outlook.office.com/calendar).
-5. Dans le menu de gauche, cliquez sur **Ajouter un calendrier**, puis sur **S'abonner à partir du web**.
-6. Collez l'URL de votre Gist.
-7. Donnez-lui un nom (ex: *Cours ISAE*), une couleur, et une icône.
-8. Cliquez sur **Importer**.
+### 1. Récupérer l'URL du flux
+1. Rendez-vous sur votre Gist secret.
+2. Cliquez sur le bouton **Raw** en haut à droite de l'encart `auriga.ics`.
+3. Copiez l'URL dans la barre d'adresse.
+   *💡 Important : supprimez le hash de révision dans l'URL afin qu'elle pointe toujours vers la dernière version générée : `https://gist.githubusercontent.com/<utilisateur>/<gist_id>/raw/auriga.ics`.*
 
-*Note : Outlook web met à jour les abonnements web toutes les 3 à 12 heures. Si vous utilisez l'application de bureau Outlook Classic sur Windows, vous pouvez forcer la synchronisation immédiatement en appuyant sur la touche `F9` (Envoyer/Recevoir).*
+### 2. S'abonner dans votre client de calendrier
 
-** L'URL du gist fonctionne aussi sur les autres applications de messagerie (google calendar, etc...). Il suffit de sélectionner l'option "Abonnement à partir du web". **
+* **Outlook (Web / Nouveau Outlook) :** Dans [Outlook Calendrier](https://outlook.office.com/calendar), cliquez sur **Ajouter un calendrier** → **S'abonner à partir du web**, collez l'URL, choisissez un nom (ex. *Cours ISAE*), puis cliquez sur **Importer**.
+* **Google Agenda :** Sur [calendar.google.com](https://calendar.google.com), cliquez sur le **`+`** à côté d'*Autres agendas* → **À partir de l'URL**, collez l'URL et cliquez sur **Ajouter un agenda**.
+* **Apple Calendrier (macOS / iOS) :**
+  * *macOS :* Menu **Fichier** → **Nouvel abonnement à un calendrier…**, collez l'URL et choisissez la fréquence d'actualisation.
+  * *iOS :* **Réglages** → **Apps** → **Calendrier** → **Comptes** → **Ajouter un compte** → **Autre** → **Ajouter un calendrier avec abonnement**.
+* **Thunderbird et autres clients (Nextcloud, Proton, etc.) :** Sélectionnez **Nouvel agenda** → **Sur le réseau** (ou *S'abonner via URL / iCal*) et collez l'URL du Gist.
+
+### ⏱️ Délais de synchronisation
+La fréquence de mise à jour des abonnements web est gérée par votre service de calendrier, indépendamment de GitHub Actions :
+* **Outlook Web :** toutes les 3 à 12 heures (sur *Outlook Classic* Windows, la touche `F9` permet de forcer la synchronisation).
+* **Google Agenda :** toutes les 12 à 24 heures (non configurable).
+* **Apple Calendrier / Thunderbird :** intervalle configurable manuellement (ex. toutes les heures).
 
 ---
 
